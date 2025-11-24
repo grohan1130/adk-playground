@@ -33,5 +33,6 @@ ENV PYTHONUNBUFFERED=1
 # Expose the port
 EXPOSE 8080
 
-# Run the ADK Web UI - serves the frontend interface
+# Run the ADK Web UI with YAML-based configuration
+# ADK will automatically discover agents from /agents and tools from /tools
 CMD ["adk", "web", "--host", "0.0.0.0", "--port", "8080", "."]

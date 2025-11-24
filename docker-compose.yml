@@ -5,6 +5,8 @@ services:
       - "8080:8080"
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    volumes:
+      - ./persisted_storage:/app/persisted_storage
     restart: unless-stopped
     container_name: adk-weather-agent
     healthcheck:

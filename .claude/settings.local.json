@@ -20,7 +20,9 @@
       "Bash(curl -v http://localhost:8080/)",
       "Bash(docker-compose logs --tail=10 adk-agent)",
       "Bash(curl -s http://localhost:8080/dev-ui/)",
-      "Bash(docker-compose logs --tail=5 adk-agent)"
+      "Bash(docker-compose logs --tail=5 adk-agent)",
+      "Bash(tree -L 2 -I '.git|.claude|__pycache__|*.pyc' /Users/mikrabay/Repositories/github.com/grohan1130/adk-playground/)",
+      "Bash(docker-compose logs --tail=50 adk-agent)"
     ],
     "deny": [],
     "ask": []
