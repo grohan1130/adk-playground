@@ -1,1 +1,10 @@
+# Google ADK and dependencies
 google-adk>=1.18.0
+
+# Core dependencies (usually installed with google-adk, but explicitly listed for clarity)
+google-generativeai
+google-ai-generativelanguage
+
+# Additional recommended dependencies
+flask>=3.0.0
+werkzeug>=3.0.0

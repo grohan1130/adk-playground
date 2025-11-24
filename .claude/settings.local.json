@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker exec adk-weather-agent cat /app/agent.py)",
+      "Bash(docker exec adk-weather-agent adk api_server --help)",
+      "Bash(git mv agent.py weather_agent/agent.py)",
+      "Bash(curl -s http://localhost:8080/)",
+      "Bash(curl -s http://localhost:8080/docs)",
+      "Bash(docker exec adk-weather-agent ls -la /app/)",
+      "Bash(docker-compose logs adk-agent)",
+      "Bash(curl -s http://localhost:8080/agents)",
+      "Bash(docker exec adk-weather-agent python3 -c \"from weather_agent import root_agent; print(root_agent)\")",
+      "Bash(curl -s http://localhost:8080/weather_agent)",
+      "Bash(curl -s http://localhost:8080/api/weather_time_agent)",
+      "Bash(docker-compose down)",
+      "WebSearch",
+      "Bash(docker-compose up -d)",
+      "Bash(docker-compose build)",
+      "Bash(docker-compose logs --tail=20 adk-agent)",
+      "Bash(curl -v http://localhost:8080/)",
+      "Bash(docker-compose logs --tail=10 adk-agent)",
+      "Bash(curl -s http://localhost:8080/dev-ui/)",
+      "Bash(docker-compose logs --tail=5 adk-agent)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
