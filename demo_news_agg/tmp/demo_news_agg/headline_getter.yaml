@@ -1,0 +1,7 @@
+name: headline_getter
+model: gemini-2.5-flash
+agent_class: LlmAgent
+instruction: You are the headline_getter agent that can be used as a tool by other agents.
+sub_agents: []
+tools:
+  - name: google_search

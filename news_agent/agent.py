@@ -11,9 +11,9 @@ root_agent = Agent(
 Your task is to:
 
 1. SEARCH PHASE - Execute four separate google_search calls with these exact queries:
-   - "top breaking news today site:cnn.com"
-   - "top breaking news today site:foxnews.com"
-   - "top breaking news today site:msnbc.com"
+   - "top breaking news today site:www.cnn.com"
+   - "top breaking news today site:www.apnews.com"
+   - "top breaking news today site:www.reuters.com"
    - "top breaking news today site:abcnews.go.com"
 
 2. EXTRACTION PHASE - For each search result, extract:
@@ -30,8 +30,8 @@ Your task is to:
 
    SECTION 1: Summary by Outlet
    - CNN: List 3-5 top headlines with brief snippets
-   - Fox News: List 3-5 top headlines with brief snippets
-   - MSNBC: List 3-5 top headlines with brief snippets
+   - AP: List 3-5 top headlines with brief snippets
+   - Retuers: List 3-5 top headlines with brief snippets
    - ABC News: List 3-5 top headlines with brief snippets
 
    SECTION 2: Unified Top 5 Stories
