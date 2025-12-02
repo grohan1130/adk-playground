@@ -8,3 +8,6 @@ google-ai-generativelanguage
 # Additional recommended dependencies
 flask>=3.0.0
 werkzeug>=3.0.0
+
+# MCP (Model Context Protocol) for redi_mcp agent
+mcp>=1.0.0

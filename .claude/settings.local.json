@@ -1,28 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(docker exec adk-weather-agent cat /app/agent.py)",
-      "Bash(docker exec adk-weather-agent adk api_server --help)",
-      "Bash(git mv agent.py weather_agent/agent.py)",
-      "Bash(curl -s http://localhost:8080/)",
-      "Bash(curl -s http://localhost:8080/docs)",
-      "Bash(docker exec adk-weather-agent ls -la /app/)",
-      "Bash(docker-compose logs adk-agent)",
-      "Bash(curl -s http://localhost:8080/agents)",
-      "Bash(docker exec adk-weather-agent python3 -c \"from weather_agent import root_agent; print(root_agent)\")",
-      "Bash(curl -s http://localhost:8080/weather_agent)",
-      "Bash(curl -s http://localhost:8080/api/weather_time_agent)",
-      "Bash(docker-compose down)",
-      "WebSearch",
-      "Bash(docker-compose up -d)",
-      "Bash(docker-compose build)",
-      "Bash(docker-compose logs --tail=20 adk-agent)",
-      "Bash(curl -v http://localhost:8080/)",
-      "Bash(docker-compose logs --tail=10 adk-agent)",
-      "Bash(curl -s http://localhost:8080/dev-ui/)",
-      "Bash(docker-compose logs --tail=5 adk-agent)",
-      "Bash(tree -L 2 -I '.git|.claude|__pycache__|*.pyc' /Users/mikrabay/Repositories/github.com/grohan1130/adk-playground/)",
-      "Bash(docker-compose logs --tail=50 adk-agent)"
+      "Bash(docker exec adk-weather-agent python3 -c \"\nimport asyncio\nfrom redi_mcp import root_agent\n\nasync def test_mcp_connection():\n    mcp_toolset = root_agent.tools[0]\n    print(f''✓ MCPToolset connection type: {type(mcp_toolset._connection_params).__name__}'')\n    print(f''✓ Server URL: {mcp_toolset._connection_params.url}'')\n    print(''\\nAttempting to connect to MCP server and list tools...'')\n    \n    try:\n        tools = await mcp_toolset.get_tools()\n        print(f''\\n✓ Successfully connected to MCP server!'')\n        print(f''✓ Found {len(tools)} tool(s):\\n'')\n        \n        for tool in tools:\n            print(f''  📦 Tool: {tool.name}'')\n            print(f''     Description: {tool.description}'')\n            if hasattr(tool, ''input_schema'') and tool.input_schema:\n                params = tool.input_schema.get(''properties'', {})\n                if params:\n                    print(f''     Parameters:'')\n                    for param_name, param_info in params.items():\n                        param_type = param_info.get(''type'', ''unknown'')\n                        param_desc = param_info.get(''description'', ''No description'')\n                        print(f''       • {param_name} ({param_type}): {param_desc}'')\n            print()\n        \n        return True\n    except Exception as e:\n        print(f''\\n✗ Error: {type(e).__name__}'')\n        print(f''   Message: {str(e)}'')\n        \n        import traceback\n        print(f''\\nTraceback:'')\n        traceback.print_exc()\n        return False\n\nresult = asyncio.run(test_mcp_connection())\nprint(f''{\"\"=\"\"*60}'')\nprint(f''Connection test: {\"\"✓ PASSED\"\" if result else \"\"✗ FAILED\"\"}'')\")"
     ],
     "deny": [],
     "ask": []
