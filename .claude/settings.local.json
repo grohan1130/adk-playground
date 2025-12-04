@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(docker exec adk-weather-agent python3 -c \"\nimport asyncio\nfrom redi_mcp import root_agent\n\nasync def test_mcp_connection():\n    mcp_toolset = root_agent.tools[0]\n    print(f''✓ MCPToolset connection type: {type(mcp_toolset._connection_params).__name__}'')\n    print(f''✓ Server URL: {mcp_toolset._connection_params.url}'')\n    print(''\\nAttempting to connect to MCP server and list tools...'')\n    \n    try:\n        tools = await mcp_toolset.get_tools()\n        print(f''\\n✓ Successfully connected to MCP server!'')\n        print(f''✓ Found {len(tools)} tool(s):\\n'')\n        \n        for tool in tools:\n            print(f''  📦 Tool: {tool.name}'')\n            print(f''     Description: {tool.description}'')\n            if hasattr(tool, ''input_schema'') and tool.input_schema:\n                params = tool.input_schema.get(''properties'', {})\n                if params:\n                    print(f''     Parameters:'')\n                    for param_name, param_info in params.items():\n                        param_type = param_info.get(''type'', ''unknown'')\n                        param_desc = param_info.get(''description'', ''No description'')\n                        print(f''       • {param_name} ({param_type}): {param_desc}'')\n            print()\n        \n        return True\n    except Exception as e:\n        print(f''\\n✗ Error: {type(e).__name__}'')\n        print(f''   Message: {str(e)}'')\n        \n        import traceback\n        print(f''\\nTraceback:'')\n        traceback.print_exc()\n        return False\n\nresult = asyncio.run(test_mcp_connection())\nprint(f''{\"\"=\"\"*60}'')\nprint(f''Connection test: {\"\"✓ PASSED\"\" if result else \"\"✗ FAILED\"\"}'')\")"
+      "WebSearch",
+      "WebFetch(domain:google.github.io)",
+      "Bash(find . -name *.py -type f -exec grep -l redi_mcp_zipdeck {})"
     ],
     "deny": [],
     "ask": []
