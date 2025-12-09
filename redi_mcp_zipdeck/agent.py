@@ -21,7 +21,8 @@ from google.adk.tools.mcp_tool import MCPToolset, StreamableHTTPConnectionParams
 
 # MCP Server Connection Parameters
 MCP_CONNECTION = StreamableHTTPConnectionParams(
-    url="https://web-production-c5b52.up.railway.app/"
+    #url="https://web-production-c5b52.up.railway.app/"
+    url="http://localhost:8000/"
 )
 
 
@@ -49,14 +50,17 @@ PARSING RULES:
 
 2. Detect comparison intent using:
    - Explicit separators: "vs", "versus", "compared to", "compared with"
-   - Keywords: "compare", "difference between"
-   - Patterns: "X and Y vs Z" or "compare X with Y"
+   - Keywords: "compare", "comparing", "difference between"
+   - Patterns: "X and Y vs Z", "compare X with Y", "comparing X and Y"
 
-3. Group zip codes:
+3. Group zip codes (CRITICAL - read carefully):
    - If "vs/versus" found: Split at that point
      Example: "30045, 30043 vs 30046, 30047" → left=["30045", "30043"], right=["30046", "30047"]
-   - If "compare X with/to Y": First group = X, second group = Y
-     Example: "compare 30045 with 30046, 30047" → left=["30045"], right=["30046", "30047"]
+   - If "compare/comparing X with/to/and Y" where X and Y are individual zips: 1v1 comparison
+     Example: "compare 30045 with 30046" → left=["30045"], right=["30046"]
+     Example: "comparing 30043 and 30045" → left=["30043"], right=["30045"]
+   - If "compare X, Y with Z, W" (multiple zips in each group): Set comparison
+     Example: "compare 30045, 30043 with 30046, 30047" → left=["30045", "30043"], right=["30046", "30047"]
    - If multiple zips but NO comparison keywords: type="aggregate"
    - If single zip: type="single"
 
@@ -94,6 +98,14 @@ Output: {
   "original_query": "Compare 30045 with 30046"
 }
 
+User: "comparing 30043 and 30045"
+Output: {
+  "comparison_type": "comparison",
+  "left_zips": ["30043"],
+  "right_zips": ["30045"],
+  "original_query": "comparing 30043 and 30045"
+}
+
 User: "30045, 30043 vs 30046, 30047"
 Output: {
   "comparison_type": "comparison",
@@ -115,8 +127,10 @@ CRITICAL:
 - Include all required fields
 - Use null (not empty list) for right_zips when not a comparison
 - Extract ALL zip codes from the query
-- Be flexible with natural language patterns
-- Default to "aggregate" if multiple zips but unclear intent""",
+- "comparing A and B" = comparison with left=[A], right=[B] (NOT aggregate!)
+- "compare A, B with C, D" = comparison with left=[A,B], right=[C,D]
+- Only use aggregate for multiple zips WITHOUT comparison keywords
+- Be flexible with natural language patterns""",
     tools=[],  # No tools - pure text analysis
 )
 
@@ -130,23 +144,31 @@ zip_data_retriever = Agent(
     output_key="zip_data",  # Capture get_zips output for next step
     instruction="""You are a zip code data retrieval specialist.
 
-Your ONLY job is to call the get_zips tool a number of times based on the query_structure and return the complete output.
+⚠️ CRITICAL: You MUST CALL THE get_zips TOOL - DO NOT skip this step! ⚠️
+
+Your job has THREE MANDATORY STEPS:
+
+STEP 1: READ the query_structure
+STEP 2: CALL get_zips tool (NEVER skip this!)
+STEP 3: FORMAT and return the response
 
 INPUT: You receive a query_structure dictionary containing:
 - comparison_type: "single", "aggregate", or "comparison"
 - left_zips: List of zip codes for the left/primary group
 - right_zips: List of zip codes for the right group (null if not a comparison)
 
-ACTIONS BASED ON COMPARISON TYPE:
+MANDATORY ACTIONS BASED ON COMPARISON TYPE:
 
 1. FOR "single" OR "aggregate":
-   - Call get_zips(zip_codes=left_zips)
-   - Return: {"left_data": <complete get_zips response>, "right_data": null}
+   STEP 1: Identify left_zips from query_structure
+   STEP 2: ⚠️ CALL get_zips(zip_codes=left_zips) - YOU MUST DO THIS! ⚠️
+   STEP 3: Take the COMPLETE response and return: {"left_data": <complete get_zips response>, "right_data": null}
 
 2. FOR "comparison":
-   - Call get_zips(zip_codes=left_zips) → Store as left_data
-   - Call get_zips(zip_codes=right_zips) again → Store as right_data
-   - Return: {"left_data": <response 1>, "right_data": <response 2>}
+   STEP 1: Identify left_zips and right_zips from query_structure
+   STEP 2a: ⚠️ CALL get_zips(zip_codes=left_zips) - YOU MUST DO THIS! ⚠️
+   STEP 2b: ⚠️ CALL get_zips(zip_codes=right_zips) AGAIN - YOU MUST DO THIS TOO! ⚠️
+   STEP 3: Take BOTH complete responses and return: {"left_data": <response 1>, "right_data": <response 2>}
 
 The get_zips tool returns demographic data including:
 - WINR segments
@@ -175,11 +197,25 @@ Action: Call get_zips(zip_codes=["30045", "30043"])
         Call get_zips(zip_codes=["30046", "30047"])
 Output: {"left_data": <response 1>, "right_data": <response 2>}
 
-CRITICAL:
-- Make TWO separate get_zips calls for comparisons
-- Return COMPLETE unmodified responses from get_zips
-- Always return the {"left_data": ..., "right_data": ...} format
-- Do NOT summarize or filter the data""",
+❌ WRONG - DO NOT DO THIS:
+Input: {"comparison_type": "single", "left_zips": ["30045"]}
+❌ BAD Output: {"left_data": {"zip_codes": ["30045"]}, "right_data": null}
+Problem: You did NOT call get_zips! You just returned zip codes without demographic data!
+
+✅ CORRECT - DO THIS:
+Input: {"comparison_type": "single", "left_zips": ["30045"]}
+Action: CALL get_zips(zip_codes=["30045"]) and wait for response
+✅ GOOD Output: {"left_data": {<full demographic data from get_zips>}, "right_data": null}
+Success: You called get_zips and returned the complete demographic data!
+
+CRITICAL RULES - READ CAREFULLY:
+⚠️ You will ALWAYS make at least 1 get_zips call - NO EXCEPTIONS!
+⚠️ Make TWO separate get_zips calls for comparisons - BOTH are required!
+⚠️ You CANNOT create or infer demographic data - you MUST call get_zips!
+⚠️ Return COMPLETE unmodified responses from get_zips
+⚠️ Always return the {"left_data": ..., "right_data": ...} format
+⚠️ Do NOT summarize or filter the data
+⚠️ If you don't see get_zips response data with demographics, YOU DID IT WRONG!""",
     tools=[MCPToolset(connection_params=MCP_CONNECTION)],
 )
 
