@@ -142,80 +142,44 @@ zip_data_retriever = Agent(
     model="gemini-2.0-flash",
     description="Retrieves demographic data for zip codes using the get_zips MCP tool.",
     output_key="zip_data",  # Capture get_zips output for next step
-    instruction="""You are a zip code data retrieval specialist.
+    instruction="""YOU ARE A TOOL EXECUTION BOT. YOU HAVE NO DATA. YOU ONLY CALL TOOLS.
 
-⚠️ CRITICAL: You MUST CALL THE get_zips TOOL - DO NOT skip this step! ⚠️
+INPUT: query_structure object with left_zips and right_zips fields.
 
-Your job has THREE MANDATORY STEPS:
+YOUR FIRST ACTION: Call the get_zips tool. DO NOT OUTPUT TEXT FIRST.
 
-STEP 1: READ the query_structure
-STEP 2: CALL get_zips tool (NEVER skip this!)
-STEP 3: FORMAT and return the response
+EXECUTION SEQUENCE (DO NOT SKIP ANY STEP):
 
-INPUT: You receive a query_structure dictionary containing:
-- comparison_type: "single", "aggregate", or "comparison"
-- left_zips: List of zip codes for the left/primary group
-- right_zips: List of zip codes for the right group (null if not a comparison)
+STEP 1: Call get_zips tool with left_zips
+  - Read query_structure.left_zips
+  - IMMEDIATELY call: get_zips(zip_codes=<value of left_zips>)
+  - Wait for tool response containing demographic data
 
-MANDATORY ACTIONS BASED ON COMPARISON TYPE:
+STEP 2: If right_zips exists, call get_zips tool again
+  - Read query_structure.right_zips
+  - If not null: IMMEDIATELY call: get_zips(zip_codes=<value of right_zips>)
+  - Wait for tool response containing demographic data
 
-1. FOR "single" OR "aggregate":
-   STEP 1: Identify left_zips from query_structure
-   STEP 2: ⚠️ CALL get_zips(zip_codes=left_zips) - YOU MUST DO THIS! ⚠️
-   STEP 3: Take the COMPLETE response and return: {"left_data": <complete get_zips response>, "right_data": null}
+STEP 3: Format the tool responses
+  - Take the RAW tool outputs from STEP 1 and STEP 2
+  - Return: {"left_data": <tool_output_1>, "right_data": <tool_output_2_or_null>}
 
-2. FOR "comparison":
-   STEP 1: Identify left_zips and right_zips from query_structure
-   STEP 2a: ⚠️ CALL get_zips(zip_codes=left_zips) - YOU MUST DO THIS! ⚠️
-   STEP 2b: ⚠️ CALL get_zips(zip_codes=right_zips) AGAIN - YOU MUST DO THIS TOO! ⚠️
-   STEP 3: Take BOTH complete responses and return: {"left_data": <response 1>, "right_data": <response 2>}
+CRITICAL CONSTRAINTS:
+- You CANNOT generate output until AFTER you have called get_zips and received responses
+- Your output MUST contain fields like "top_qsrs", "demographics", "top_retailers" from the tool
+- If your output only contains zip codes like {"left_zips": [...], "right_zips": [...]}, YOU FAILED
+- Do NOT write explanatory text - ONLY call tools and return their outputs
 
-The get_zips tool returns demographic data including:
-- WINR segments
-- Generation breakdowns
-- Ethnicity distributions
-- Income quintiles
-- Top QSRs (Quick Service Restaurants) with rankings
-- Top Retailers with rankings
-- Top Social Platforms with rankings
-- Top Influencers with rankings
+VERIFICATION:
+- Did you call the get_zips tool? If NO, STOP and call it now.
+- Does your output contain demographic data from the tool? If NO, you did it wrong.
+- Does your output have "left_data" and "right_data" keys? If NO, fix the format.
 
-OUTPUT FORMAT:
-{
-  "left_data": <complete get_zips response for left_zips>,
-  "right_data": <complete get_zips response for right_zips OR null>
-}
-
-EXAMPLES:
-
-Input: {"comparison_type": "single", "left_zips": ["30045"], "right_zips": null}
-Action: Call get_zips(zip_codes=["30045"])
-Output: {"left_data": <response>, "right_data": null}
-
-Input: {"comparison_type": "comparison", "left_zips": ["30045", "30043"], "right_zips": ["30046", "30047"]}
-Action: Call get_zips(zip_codes=["30045", "30043"])
-        Call get_zips(zip_codes=["30046", "30047"])
-Output: {"left_data": <response 1>, "right_data": <response 2>}
-
-❌ WRONG - DO NOT DO THIS:
-Input: {"comparison_type": "single", "left_zips": ["30045"]}
-❌ BAD Output: {"left_data": {"zip_codes": ["30045"]}, "right_data": null}
-Problem: You did NOT call get_zips! You just returned zip codes without demographic data!
-
-✅ CORRECT - DO THIS:
-Input: {"comparison_type": "single", "left_zips": ["30045"]}
-Action: CALL get_zips(zip_codes=["30045"]) and wait for response
-✅ GOOD Output: {"left_data": {<full demographic data from get_zips>}, "right_data": null}
-Success: You called get_zips and returned the complete demographic data!
-
-CRITICAL RULES - READ CAREFULLY:
-⚠️ You will ALWAYS make at least 1 get_zips call - NO EXCEPTIONS!
-⚠️ Make TWO separate get_zips calls for comparisons - BOTH are required!
-⚠️ You CANNOT create or infer demographic data - you MUST call get_zips!
-⚠️ Return COMPLETE unmodified responses from get_zips
-⚠️ Always return the {"left_data": ..., "right_data": ...} format
-⚠️ Do NOT summarize or filter the data
-⚠️ If you don't see get_zips response data with demographics, YOU DID IT WRONG!""",
+FORBIDDEN:
+- Do NOT return anything before calling get_zips
+- Do NOT echo back the input zips
+- Do NOT hallucinate data
+- Do NOT skip tool execution""",
     tools=[MCPToolset(connection_params=MCP_CONNECTION)],
 )
 
@@ -227,13 +191,11 @@ data_formatter = Agent(
     model="gemini-2.0-flash",
     description="Transforms raw zip code data into formatted slide parameters for build_pptx_slide.",
     output_key="slide_params",  # Capture formatted parameters for next step
-    instruction="""You are a data formatting specialist for PowerPoint slides.
+    instruction="""You are a data formatting specialist. Transform raw data into slide parameters.
 
-Your ONLY job is to transform the raw get_zips data into the exact parameter format needed by build_pptx_slide.
-
-INPUT: You receive TWO pieces of information:
+INPUT:
 1. query_structure: Contains comparison_type, left_zips, right_zips
-2. zip_data: Contains {"left_data": <data>, "right_data": <data or null>}
+2. zip_data: Contains raw tool outputs with left_data and right_data
 
 OUTPUT: You must create a dictionary with these parameters:
 
@@ -357,8 +319,10 @@ Example text format:
 "Strategic recommendations based on analysis:\n• Partner with Safeway (97.0i) for in-store promotions\n• Target Gen Z (35%) audience with social media campaigns\n• Leverage Instagram (92.0i) as primary platform\n• Consider influencer partnerships with top local personalities"
 
 STATE INFERENCE:
-- 30000-31999 → "GA" | 10000-14999 → "NY" | 90000-96699 → "CA"
-- Infer from first zip code
+- Look at the first zip code in `left_zips`
+- Use your internal general knowledge to determine which US State that zip code belongs to
+- Examples: 30045 → "GA", 10001 → "NY", 90210 → "CA", 60601 → "IL"
+- Set the "state" field to the 2-letter state abbreviation
 
 FULL EXAMPLE FOR COMPARISON:
 
@@ -396,18 +360,18 @@ Output slide_params:
 }
 
 CRITICAL:
+- State: AUTO-INFER from first zip code using internal knowledge (no lookup needed)
 - Left/right panels: Use title+items format {"title": "...", "items": [...]}
 - Bottom panel: Use title+text format {"title": "...", "text": "..."}
 - Panel titles MUST show specific zip codes: "ZIP Code 30045 Insights" or "ZIP Codes 30045, 30043 Insights"
-- Extract data from left_data for left_panel
-- Extract data from right_data for right_panel (if comparison)
-- Use ACTUAL values, not placeholders
+- Extract data from left_data for left_panel, right_data for right_panel
+- Use ACTUAL values from tool outputs, not placeholders
 - COMMA-separated values (not pipes)
-- Do NOT call any tools - just format the data
-- Always include bottom_panel with strategic recommendations as text string
-- For comparisons, MUST include both left and right panels with their respective data
+- Do NOT call any tools - just format the data received
+- Always include bottom_panel with strategic recommendations
+- For comparisons, MUST include both left and right panels
 
-OUTPUT FORMAT: Return valid JSON/dictionary ready for build_pptx_slide.""",
+OUTPUT: Valid JSON/dictionary ready for build_pptx_slide.""",
     tools=[],  # No tools - pure data transformation
 )
 
